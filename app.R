@@ -24,7 +24,7 @@ ui_tab_regional_map <- function() {
       leafletOutput("regional_map", width = "100%", height = "100%"),
       # Sidebar:  -----------------------------------------------------------------
       absolutePanel(id = "controls", class = "panel panel-default", fixed = TRUE,
-                    draggable = TRUE, top = 60, left = "auto", right = 10, bottom = "auto",
+                    draggable = FALSE, top = 60, left = "auto", right = 10, bottom = "auto",
                     width = "auto", height = "auto",
                     
                     tags$strong(h1("Where to Go Next?")),
@@ -35,7 +35,7 @@ ui_tab_regional_map <- function() {
                         
                         fluidRow(
                           # Refresh Button
-                          column(width = 7,
+                          column(width = 5,
                                  actionBttn(
                                    inputId = "refresh",
                                    label = "Run Algorithm", 
@@ -45,7 +45,7 @@ ui_tab_regional_map <- function() {
                                  )
                           ),
                           # Last Run Date
-                          column(width = 5,
+                          column(width = 7,
                                  htmlOutput("last_run_date")
                           )
                         ),
@@ -93,21 +93,22 @@ server <- function(input, output, session) {
   output$last_run_date <- renderUI({
     date <- as.character(Sys.Date())
     text <- paste0(
-      tags$h5(tags$strong("Last Run: ")),
-      tags$u(date)
+      tags$h5(tags$strong("Last Run: "), tags$u(date))
     )
     return(HTML(text))
   })
   
   output$recommend_table<- renderFormattable({
+    DISPLAY_NUMBER <- 3
     algo_recommendation <- algo_data()
     algo_recommendation %>%
-      rename(`Recommended Location` = formatted_address, `Confidence` = confidence) %>%
+      rename(`Recommended Location (top 3)` = formatted_address, `Confidence` = confidence) %>%
       arrange(-Confidence) %>%
+      head(DISPLAY_NUMBER) %>%
       mutate(Confidence = percent(Confidence)) %>%
       formattable(align = c("l", "c"),
       list(
-        `Recommended Location` = 
+        `Recommended Location (top 3)` = 
           formatter("span", style = ~ style(color = "grey",font.weight = "bold")),
         `Confidence` = color_tile(customGreen0, customGreen)
       )
