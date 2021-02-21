@@ -118,23 +118,38 @@ server <- function(input, output, session) {
     testing_data <- tested_data()
     #bins <- c(0, 0.02, 0.05, 0.07, 0.10, 0.12, 0.15, 0.17, 0.20, 1)
     pal <- colorBin("YlOrRd", domain = testing_data$positivity, bins = 5)
+    RADIUS_MIN <- 300
+    RADIUS_MAX <- 900
+    
+    popup_content <- 
+      testing_data %>% 
+      select(formatted_address, address, total_test, positivity) %>%
+      pmap_chr(get_pop_content)
+    testing_data <- 
+      testing_data %>%
+      mutate(popup_content = popup_content)
     
     leaflet(data = testing_data) %>%
       #addTiles() %>%
       addProviderTiles(providers$Stamen.Toner) %>%
       addCircles(
         ~lng, ~lat,
-        weight = 2, color = "black", fillColor = ~pal(positivity),
-        opacity = ~ positivity, #~expit(positivity),
+        weight = 2, color = "black", 
+        fillColor = ~pal(positivity), stroke = TRUE,
+        labelOptions = labelOptions(noHide = F, direction = 'auto'),
+        options = markerOptions(riseOnHover = TRUE),
+        #opacity = ~ positivity, #~expit(positivity),
         #fillOpacity = ~positivity,
-        radius = ~total_test,
-        popup = ~formatted_address) %>% 
-      addLegend(pal = pal, values = ~positivity, 
-                opacity = 0.7, title = NULL, position = "bottomleft",
-                labFormat = labelFormat(
-                  prefix = "(", suffix = ")%", between = ", ",
-                  transform = function(x) 100 * x
-                ))
+        radius = ~normalize(total_test, min = RADIUS_MIN, max = RADIUS_MAX),
+        popup = ~popup_content) %>% 
+      addLegend(
+        pal = pal, values = ~positivity, 
+        opacity = 0.7, title = "Positivity", position = "topleft",
+        labFormat = labelFormat(
+          prefix = "(", suffix = ")%", between = ", ",
+          transform = function(x) 100 * x
+          )
+        )
   })
 }
 
