@@ -27,7 +27,7 @@ ui_tab_regional_map <- function() {
                     draggable = FALSE, top = 60, left = "auto", right = 10, bottom = "auto",
                     width = "auto", height = "auto",
                     
-                    tags$strong(h1("Where to Go Next?")),
+                    tags$strong(h1("What's Next?")),
                     # 
                     # br(),
                     
