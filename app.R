@@ -28,10 +28,11 @@ ui_tab_regional_map <- function() {
                     width = "auto", height = "auto",
                     
                     tags$strong(h1("Where to Go Next?")),
-                    
-                    br(),
+                    # 
+                    # br(),
                     
                     box(collapsible = T, collapsed = T, width = 12, status = "danger", 
+                        
                         fluidRow(
                           # Refresh Button
                           column(width = 7,
@@ -131,7 +132,8 @@ server <- function(input, output, session) {
       testing_data %>%
       mutate(popup_content = popup_content)
     
-    leaflet(data = testing_data) %>%
+    leaflet(data = testing_data,
+            options = leafletOptions(zoomControl = FALSE)) %>%
       #addTiles() %>%
       addProviderTiles(providers$Stamen.Toner) %>%
       addCircles(
@@ -146,7 +148,7 @@ server <- function(input, output, session) {
         popup = ~popup_content) %>% 
       addLegend(
         pal = pal, values = ~positivity, 
-        opacity = 0.7, title = "Positivity", position = "topleft",
+        opacity = 0.7, title = "Positivity", position = "bottomright",
         labFormat = labelFormat(
           prefix = "(", suffix = ")%", between = ", ",
           transform = function(x) 100 * x
