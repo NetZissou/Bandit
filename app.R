@@ -11,10 +11,11 @@ load("data/pseudo_data.RData")
 customGreen0 = "#DeF7E9"
 customGreen = "#71CA97"
 # ================ UI: Regional Map ===============================================
-ui_recommend_table <- function(box_width = 12) {
-  box(width = box_width,
-      formattableOutput("recommend_table")
-      )
+ui_recommend_table <- function() {
+  # box(width = box_width, collapsed = F,
+  #     formattableOutput("recommend_table")
+  #     )
+  formattableOutput("recommend_table")
 }
 
 ui_tab_regional_map <- function() {
@@ -23,14 +24,14 @@ ui_tab_regional_map <- function() {
       leafletOutput("regional_map", width = "100%", height = "100%"),
       # Sidebar:  -----------------------------------------------------------------
       absolutePanel(id = "controls", class = "panel panel-default", fixed = TRUE,
-                    draggable = TRUE, top = 60, left = "auto", right = 20, bottom = "auto",
-                    width = 400, height = "auto",
+                    draggable = TRUE, top = 60, left = "auto", right = 10, bottom = "auto",
+                    width = "auto", height = "auto",
                     
                     tags$strong(h1("Where to Go Next?")),
                     
                     br(),
                     
-                    box(collapsible = T, width = 12, status = "danger",
+                    box(collapsible = T, collapsed = T, width = 12, status = "danger", 
                         fluidRow(
                           # Refresh Button
                           column(width = 7,
@@ -62,6 +63,7 @@ ui_tab_regional_map <- function() {
 # ================ UI: Layout =====================================================
 ui <- navbarPage("SARS-COV-2 Mobile Testing", id = "nav", selected = "Regional Map",
   useShinydashboard(),
+  collapsible = TRUE,
   theme = shinytheme("yeti"),
   tags$head(
     # Include our custom CSS
