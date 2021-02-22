@@ -27,36 +27,48 @@ ui_tab_regional_map <- function() {
                     draggable = FALSE, top = 60, left = "auto", right = 10, bottom = "auto",
                     width = "auto", height = "auto",
                     
-                    tags$strong(h1("What's Next?")),
-                    # 
-                    # br(),
+                    br(),
                     
-                    box(collapsible = T, collapsed = T, width = 12, status = "danger", 
-                        
-                        fluidRow(
-                          # Refresh Button
-                          column(width = 5,
-                                 actionBttn(
-                                   inputId = "refresh",
-                                   label = "Run Algorithm", 
-                                   style = "unite",
-                                   color = "danger",
-                                   icon = icon("sync")
-                                 )
-                          ),
-                          # Last Run Date
-                          column(width = 7,
-                                 htmlOutput("last_run_date")
-                          )
+                    dropdownButton(
+                      # box(width = 12, status = "danger", 
+                      #     tags$strong(h1("What's Next?")),
+                      #     helpText("Click widget for more information.")
+                      # ),
+                      # 
+                      # br(),
+                      br(),
+                      tags$strong(h1("What's Next?")),
+                      helpText("Click widget in the map for more information."),
+                      fluidRow(
+                        # Refresh Button
+                        column(width = 5,
+                               actionBttn(
+                                 inputId = "refresh",
+                                 label = "Run Algorithm", 
+                                 style = "unite",
+                                 color = "danger",
+                                 icon = icon("sync")
+                               )
                         ),
-                        
-                        br(),
-                        
-                        # Recommendations List
-                        fluidRow(
-                          ui_recommend_table()
+                        # Last Run Date
+                        column(width = 7,
+                               htmlOutput("last_run_date")
                         )
-                      )
+                      ),
+                      
+                      br(),
+                      
+                      # Recommendations List
+                      # fluidRow(
+                      #   ui_recommend_table()
+                      # ),
+                      ui_recommend_table(),
+                      circle = TRUE, status = "danger", right = TRUE,
+                      icon = icon("gear"), width = "400px",
+                      
+                      tooltip = tooltipOptions(title = "Click to see inputs !", 
+                                               placement = "left")
+                    )
                     
         ),
       )
