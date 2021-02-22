@@ -161,7 +161,7 @@ server <- function(input, output, session) {
         popup = ~popup_content) %>% 
       addLegend(
         pal = pal, values = ~positivity, 
-        opacity = 0.7, title = "Positivity", position = "bottomright",
+        opacity = 0.7, title = "Positivity", position = "topright",
         labFormat = labelFormat(
           prefix = "(", suffix = ")%", between = ", ",
           transform = function(x) 100 * x
