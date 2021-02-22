@@ -131,6 +131,7 @@ server <- function(input, output, session) {
     # Color tiles
     # TODO: corresponding to the input data
     # TODO: Categorize the testing size 
+    # Preparing ------------------------------------------------------------------ #
     testing_data <- tested_data()
     #bins <- c(0, 0.02, 0.05, 0.07, 0.10, 0.12, 0.15, 0.17, 0.20, 1)
     pal <- colorBin("YlOrRd", domain = testing_data$positivity, bins = 5)
@@ -145,10 +146,23 @@ server <- function(input, output, session) {
       testing_data %>%
       mutate(popup_content = popup_content)
     
+    #pin-outline
+    icons <- awesomeIcons(
+      icon = "map-pin",
+      iconColor = "black",
+      library = "fa",
+      markerColor  = "red"
+    )
+    # Map ------------------------------------------------------------------------ #
     leaflet(data = testing_data,
             options = leafletOptions(zoomControl = FALSE)) %>%
       #addTiles() %>%
       addProviderTiles(providers$Stamen.Toner) %>%
+      addAwesomeMarkers(
+        ~lng, ~lat,
+        icon=icons,
+        popup = ~popup_content
+      ) %>%
       addCircles(
         ~lng, ~lat,
         weight = 2, color = "black", 
@@ -157,8 +171,7 @@ server <- function(input, output, session) {
         options = markerOptions(riseOnHover = TRUE),
         #opacity = ~ positivity, #~expit(positivity),
         #fillOpacity = ~positivity,
-        radius = ~normalize(total_test, min = RADIUS_MIN, max = RADIUS_MAX),
-        popup = ~popup_content) %>% 
+        radius = ~normalize(total_test, min = RADIUS_MIN, max = RADIUS_MAX)) %>% 
       addLegend(
         pal = pal, values = ~positivity, 
         opacity = 0.7, title = "Positivity", position = "topright",
