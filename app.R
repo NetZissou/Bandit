@@ -24,7 +24,7 @@ ui_tab_regional_map <- function() {
       leafletOutput("regional_map", width = "100%", height = "100%"),
       # Sidebar:  -----------------------------------------------------------------
       absolutePanel(id = "controls", class = "panel panel-default", fixed = TRUE,
-                    draggable = FALSE, top = 60, left = "auto", right = 10, bottom = "auto",
+                    draggable = FALSE, top = 60, left = 10, right = "auto", bottom = "auto",
                     width = "auto", height = "auto",
                     
                     br(),
@@ -63,11 +63,11 @@ ui_tab_regional_map <- function() {
                       #   ui_recommend_table()
                       # ),
                       ui_recommend_table(),
-                      circle = TRUE, status = "danger", right = TRUE,
-                      icon = icon("gear"), width = "400px",
+                      circle = TRUE, status = "danger", right = FALSE,
+                      icon = icon("gear"), width = "350px",
                       
                       tooltip = tooltipOptions(title = "Click to see inputs !", 
-                                               placement = "left")
+                                               placement = "right")
                     )
                     
         ),
