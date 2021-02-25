@@ -73,6 +73,59 @@ ui_tab_regional_map <- function() {
         ),
       )
 }
+
+# TODO: Apply renderUI 
+ui_location_box <- function() {
+  fluidRow(
+    column(width = 8,
+           box(width = 12, status = "primary",
+               column(width = 7,
+                      h3("Location Name"),
+                      tags$strong("Category: "), br(),
+                      tags$strong("Census Name & Number: "), br(),
+                      tags$strong("Street Address: "), br(),
+                      br(),
+                      actionBttn(
+                        inputId = "Id107",
+                        label = "Data Entry",
+                        style = "unite", 
+                        color = "primary")
+                      ),
+               column(width = 5,
+                      leafletOutput("location_map", height = 200)
+                      )
+           )
+    ),
+    column(width = 4,
+           valueBox(
+             value = "1,345",
+             subtitle = "Lines of code written",
+             icon = icon("code"),
+             width = 12,
+             color = "red",
+             href = NULL),
+           
+           valueBox(
+             value = "1,345",
+             subtitle = "Lines of code written",
+             icon = icon("code"),
+             width = 12,
+             color = "red",
+             href = NULL)
+    )
+  )
+}
+
+ui_tab_location <- function() {
+  sidebarLayout(
+    sidebarPanel(width = 6, style = "overflow-y:scroll; max-height: 600px",
+                 ui_location_box()
+                 ),
+    mainPanel(width = 6,
+              
+              )
+  )
+}
 # ================ UI: Layout =====================================================
 ui <- navbarPage("SARS-COV-2 Mobile Testing", id = "nav", selected = "Regional Map",
   useShinydashboard(),
@@ -85,7 +138,9 @@ ui <- navbarPage("SARS-COV-2 Mobile Testing", id = "nav", selected = "Regional M
   tabPanel("Regional Map",
            ui_tab_regional_map()
            ),
-  tabPanel("Locations"),
+  tabPanel("Locations",
+           ui_tab_location(),
+           ),
   tabPanel("Instructions")
 )
 
@@ -180,6 +235,12 @@ server <- function(input, output, session) {
           transform = function(x) 100 * x
           )
         )
+  })
+  
+  output$location_map <- renderLeaflet({
+    leaflet() %>%
+      addTiles() %>%  # Add default OpenStreetMap map tiles
+      addMarkers(lng=174.768, lat=-36.852, popup="The birthplace of R")
   })
 }
 
