@@ -10,13 +10,13 @@ expit <- function(etas) {
   )
 }
 
-get_pop_content <- function(formatted_address, address, total_test, positivity) {
+get_pop_content <- function(address, location_name, test_number, positivity) {
   
   content <- 
     paste(
-    tags$h4(tags$strong(address)),
-    formatted_address, br(),
-    tags$strong("Number of test: "), tags$u(total_test), "    ",
+    tags$h4(tags$strong(location_name)),
+    address, br(),
+    tags$strong("Number of test: "), tags$u(test_number), "    ",
     tags$strong("Positivity: "), tags$u(percent(positivity))
   )
   return(content)

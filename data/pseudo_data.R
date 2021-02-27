@@ -46,7 +46,50 @@ pseudo_data <-
   )
 
 pseudo_recommendation <- pseudo_data %>%
-  select(formatted_address) %>%
+  select(address, formatted_address) %>%
   mutate(confidence = c(0.97, 0.95, 0.96, 0.90, 0.92, 0.97, 0.98))
 
-save(pseudo_data, pseudo_recommendation, file = "data/pseudo_data.RData")
+
+# Users --------------------------------------------------------
+
+users <- tibble(
+  name = c("Daria", "Dane", "David", "Eli", "Gregg", "Sam", "Net"),
+  type = c("admin", "admin", "member", "member", "member", "member", "admin"),
+  group = c(1, 1, 1, 2, 2, 3, 3)
+)
+
+schedule <- tibble(
+  group = c(1, 1, 2, 2, 2, 3, 3, 3),
+  location_name = c("thompson library Columbus",
+                    "18th library Columbus",
+                    "Ohio Union Columbus",
+                    "Condado Tacos Columbus",
+                    "Buckeye Donuts Columbus",
+                    'Lennox Town Center Columbus',
+                    "Condado Tacos Columbus",
+                    "Buckeye Donuts Columbus"),
+  date = c(ymd(20210301), ymd(20210301), ymd(20210301), ymd(20210301),
+           ymd(20210302), ymd(20210302), ymd(20210302), ymd(20210303))
+)
+
+tests <- tibble(
+  date = c(rep(ymd(20210301), 50), rep(ymd(20210302), 50)),
+  result = rbernoulli(100, .1),
+  location_name = sample(LOCATION_CANDIDATES, 100, replace = T),
+  group = sample(c(1,2,3), 100, replace = T)
+)
+
+location_info <- pseudo_data %>%
+  select(
+    location_name = address, address = formatted_address, 
+    lat, lng,
+    test_number = total_test, 
+    positivity)
+
+
+recommendation <- pseudo_recommendation %>%
+  rename(location_name = address)
+
+save(pseudo_data, pseudo_recommendation, 
+     users, schedule, tests, 
+     location_info, recommendation, file = "data/pseudo_data.RData")
