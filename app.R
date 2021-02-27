@@ -1,13 +1,3 @@
-if(startsWith(Sys.info()['nodename'], "o")){
-  # FIXME: not sure why we still need to do this since opening a terminal you see
-  # that with the proper .Renviron that LD_LIBRARY_PATH has gdal and if you do
-  # ldd /users/PZS0562/efranz/R/x86_64-pc-linux-gnu-library/3.6/rgdal/libs/rgdal.so
-  # you see libgdal.so.20 point to /usr/local/R/gnu/9.1/3.6.3/site/lib/gdal/2.4.4/lib/libgdal.so.20
-  # and you can confirm that /usr/local/R/gnu/9.1/3.6.3/site/lib/gdal/2.4.4/lib/libgdal.so.20 exists
-  # and /usr/local/R/gnu/9.1/3.6.3/site/lib/gdal/2.4.4/lib is in the LD_LIBRARY_PATH env var
-  #
-  dyn.load("/usr/local/R/gnu/9.1/3.6.3/site/lib/gdal/2.4.4/lib/libgdal.so")
-}
 library(tidyverse)
 library(lubridate)
 library(shiny)
@@ -173,6 +163,8 @@ ui <- navbarPage("SARS-COV-2 Mobile Testing", id = "nav", selected = "Regional M
     # Include our custom CSS
     includeCSS("styles.css")
   ),
+  tags$style("@import url(https://use.fontawesome.com/releases/v5.7.2/css/all.css);"),
+  
   tabPanel("Regional Map",
            ui_tab_regional_map()
            ),
@@ -374,7 +366,7 @@ server <- function(input, output, session) {
       )
       # Map ------------------------------------------------------------------------ #
       leaflet(data = location_info,
-              options = leafletOptions(zoomControl = FALSE, attributionControl=FALSE)) %>%
+              options = leafletOptions(zoomControl = TRUE, attributionControl=FALSE)) %>%
         #addTiles() %>%
         addProviderTiles(providers$Stamen.Toner) %>%
         addAwesomeMarkers(
