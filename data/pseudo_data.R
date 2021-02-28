@@ -3,13 +3,14 @@
 library(httr)
 library(jsonlite)
 library(tidyverse)
-
+library(lubridate)
 LOCATION_CANDIDATES <- c(
   "thompson library Columbus",
   "18th library Columbus",
   "Ohio Union Columbus",
   "Condado Tacos Columbus",
-  "Buckeye Donuts Columbus",
+  "Buckeye Donuts Columbus N High St",
+  "Buckeye Donuts Columbus S High St",
   'Lennox Town Center Columbus'
 )
 
@@ -55,11 +56,11 @@ pseudo_recommendation <- pseudo_data %>%
 users <- tibble(
   name = c("Daria", "Dane", "David", "Eli", "Gregg", "Sam", "Net"),
   type = c("admin", "admin", "member", "member", "member", "member", "admin"),
-  group = c(1, 1, 1, 2, 2, 3, 3)
+  group_id = c(1, 1, 1, 2, 2, 3, 3)
 )
 
 schedule <- tibble(
-  group = c(1, 1, 2, 2, 2, 3, 3, 3),
+  group_id = c(1, 1, 2, 2, 2, 3, 3, 3),
   location_name = c("thompson library Columbus",
                     "18th library Columbus",
                     "Ohio Union Columbus",
@@ -76,7 +77,7 @@ tests <- tibble(
   date = c(rep(ymd(20210301), 50), rep(ymd(20210302), 50)),
   result = rbernoulli(100, .1),
   location_name = sample(LOCATION_CANDIDATES, 100, replace = T),
-  group = sample(c(1,2,3), 100, replace = T)
+  group_id = sample(c(1,2,3), 100, replace = T)
 )
 
 location_info <- pseudo_data %>%

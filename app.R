@@ -6,7 +6,7 @@ library(leaflet)
 library(shinyWidgets)
 library(shinythemes)
 library(formattable)
-library(sf)
+#library(sf)
 source("assist/utility.R")
 load("data/pseudo_data.RData")
 customGreen0 = "#DeF7E9"
@@ -14,9 +14,6 @@ customGreen = "#71CA97"
 LOCATION_SELECTION <- location_info %>% distinct(location_name) %>% pull()
 # ================ UI: Regional Map ===============================================
 ui_recommend_table <- function() {
-  # box(width = box_width, collapsed = F,
-  #     formattableOutput("recommend_table")
-  #     )
   formattableOutput("recommend_table")
 }
 
@@ -115,7 +112,30 @@ ui_location_box <- function() {
            )
   )
 }
-
+ui_data_entry <- function() {
+  fluidRow(
+    column(width = 6,
+      dateInput("entry_date", "Entry date: "),
+      selectInput(
+        inputId = "entry_location", label = "Entry location",
+        choices = LOCATION_SELECTION,
+        selected = "thompson library Columbus",
+        width = "400px"
+      ),
+      selectInput(
+        inputId = "entry_result", label = "Test result",
+        choices = c("Positive" = 1, "Negative" = 0),
+        selected = "Negative",
+        width = "400px"
+      ),
+      numericInput(inputId = "entry_group_id", label = "Group id", value = 1),
+      actionButton("submit", "Submit")
+    ),
+    column(width = 6,
+      DT::dataTableOutput("test_data_table")
+    )
+  )
+}
 ui_tab_location <- function() {
   # sidebarLayout(
   #   sidebarPanel(width = 6, style = "overflow-y:scroll; max-height: 600px",
@@ -150,7 +170,7 @@ ui_tab_location <- function() {
                  ui_location_box()
                  ),
     mainPanel(width = 12,
-              
+              ui_data_entry()
               )
   )
 }
@@ -211,7 +231,9 @@ server <- function(input, output, session) {
     )
     return(HTML(text))
   })
-  
+  # ===================================================== #
+  # ================ Recommendation Table ===============
+  # ===================================================== #
   output$recommend_table<- renderFormattable({
     DISPLAY_NUMBER <- 3
     algo_recommendation <- recommendation_data()
@@ -228,7 +250,9 @@ server <- function(input, output, session) {
       )
     )
   })
-  
+  # ===================================================== #
+  # ================ Main Regional Map ==================
+  # ===================================================== #
   output$regional_map <- renderLeaflet({
     # Color tiles
     # TODO: corresponding to the input data
@@ -294,20 +318,9 @@ server <- function(input, output, session) {
           )
         )
   })
-  
-  # observe({
-  #   click<-input$map_marker_click
-  #   if(is.null(click))
-  #     return()
-  #   text<-paste("Lattitude ", click$lat, "Longtitude ", click$lng)
-  #   text2<-paste("You've selected point ", click$id)
-  #   # map$clearPopups()
-  #   # map$showPopup( click$lat, click$lng, text)
-  #   output$Click_text<-renderText({
-  #     click$id
-  #   })
-  # 
-  # })
+  # ===================================================== #
+  # ================ Main map click event ===============
+  # ===================================================== #
   observeEvent(input$regional_map_marker_click, { 
     p <- input$regional_map_marker_click
     # output$Click_text <- renderText({
@@ -324,9 +337,16 @@ server <- function(input, output, session) {
       inputId = "select_search",
       selected = p$id
     )
+    updateSelectInput(
+      session = session,
+      inputId = "entry_location",
+      selected = p$id
+    )
     #print(p)
   }, ignoreInit = TRUE)
-  
+  # ===================================================== #
+  # ================ Search input update event ==========
+  # ===================================================== #
   observe({
     selection <- input$select_search
     updateSearchInput(
@@ -334,6 +354,11 @@ server <- function(input, output, session) {
       inputId = "search",
       value = selection,
       trigger = TRUE
+    )
+    updateSelectInput(
+      session = session,
+      inputId = "entry_location",
+      selected = selection
     )
   })
   
@@ -401,12 +426,38 @@ server <- function(input, output, session) {
       location_info$test_number
     })
   })
+  # ===================================================== #
+  # ================ Data Entry =========================
+  # ===================================================== #
+  entry_data <- reactive({
+    #input$data_entry_button
+    input$submit
+    data <- isolate(
+      c(
+        "date" = as.double(ymd(input$entry_date)), 
+        "result" = input$entry_result, 
+        "location_name" = input$entry_location, 
+        "group_id" = input$entry_group_id
+      )
+    )
+    return(data)
+  })
   
-  # output$location_map <- renderLeaflet({
-  #   leaflet() %>%
-  #     addTiles() %>%  # Add default OpenStreetMap map tiles
-  #     addMarkers(lng=174.768, lat=-36.852, popup="The birthplace of R")
-  # })
+  observeEvent(input$submit,{
+    saveData(entry_data())
+  })
+
+  output$test_data_table <- DT::renderDataTable({
+    input$submit
+    location <- input$select_search
+    loadData() %>%
+      as_tibble() %>%
+      mutate(
+        date = as_date(date),
+        result = ifelse(result == 1, "Positive", "Negative")
+      ) %>%
+      filter(location_name == location)
+  })
 }
 
 shinyApp(ui, server)
