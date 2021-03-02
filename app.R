@@ -27,8 +27,8 @@ ui_tab_regional_map <- function() {
       # absolutePanel(id = "controls", class = "panel panel-default", fixed = TRUE,
       #               draggable = FALSE, top = 60, left = 10, right = "auto", bottom = "auto",
       #               width = "auto", height = "auto",
-      absolutePanel(id = "controls", top = 20, left = 20, right = "auto", bottom = "auto",
-                    width = "400px", height = "auto", draggable = TRUE,              
+      absolutePanel(id = "controls", top = 5, left = 5, right = "auto", bottom = "auto",
+                    width = "360px", height = "auto", draggable = TRUE,              
                     br(),
                     ## TODO: Uncomment this if we want to bring dropdown back again
                     # dropdownButton(
@@ -56,6 +56,7 @@ ui_tab_regional_map <- function() {
                                              offLabel = "",
                                              value = TRUE)
                                  ),
+                          column(width = 1),
                           column(width = 3, align = "left",
                                  switchInput("show_legend",
                                              label = "Legend",
@@ -389,7 +390,7 @@ server <- function(input, output, session) {
         radius = ~normalize(test_number, min = RADIUS_MIN, max = RADIUS_MAX)) %>%
       addLegend(
         pal = pal, values = ~positivity, 
-        opacity = 0.7, title = "Positivity", position = "topright",
+        opacity = 0.7, title = "Positivity", position = "bottomright",
         labFormat = labelFormat(
           prefix = "(", suffix = ")%", between = ", ",
           transform = function(x) 100 * x
@@ -421,7 +422,7 @@ server <- function(input, output, session) {
       pal <- pal
       proxy %>% addLegend(
         pal = pal, values = ~positivity, 
-        opacity = 0.7, title = "Positivity", position = "topright",
+        opacity = 0.7, title = "Positivity", position = "bottomright",
         labFormat = labelFormat(
           prefix = "(", suffix = ")%", between = ", ",
           transform = function(x) 100 * x
