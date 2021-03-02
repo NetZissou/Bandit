@@ -6,11 +6,13 @@ library(leaflet)
 library(shinyWidgets)
 library(shinythemes)
 library(formattable)
+library(shinyjs)
 #library(sf)
 source("assist/utility.R")
 load("data/pseudo_data.RData")
 customGreen0 = "#DeF7E9"
 customGreen = "#71CA97"
+# TODO: Make this interactive
 LOCATION_SELECTION <- location_info %>% distinct(location_name) %>% pull()
 # ================ UI: Regional Map ===============================================
 ui_recommend_table <- function() {
@@ -22,52 +24,124 @@ ui_tab_regional_map <- function() {
       # Main: map -----------------------------------------------------------------
       leafletOutput("regional_map", width = "100%", height = "100%"),
       # Sidebar:  -----------------------------------------------------------------
-      absolutePanel(id = "controls", class = "panel panel-default", fixed = TRUE,
-                    draggable = FALSE, top = 60, left = 10, right = "auto", bottom = "auto",
-                    width = "auto", height = "auto",
-                    
+      # absolutePanel(id = "controls", class = "panel panel-default", fixed = TRUE,
+      #               draggable = FALSE, top = 60, left = 10, right = "auto", bottom = "auto",
+      #               width = "auto", height = "auto",
+      absolutePanel(id = "controls", top = 20, left = 20, right = "auto", bottom = "auto",
+                    width = "400px", height = "auto", draggable = TRUE,              
                     br(),
-                    
-                    dropdownButton(
-                      # box(width = 12, status = "danger", 
-                      #     tags$strong(h1("What's Next?")),
-                      #     helpText("Click widget for more information.")
-                      # ),
-                      # 
-                      # br(),
-                      br(),
-                      tags$strong(h1("What's Next?")),
-                      helpText("Click widget in the map for more information."),
-                      fluidRow(
-                        # Refresh Button
-                        column(width = 5,
-                               actionBttn(
-                                 inputId = "refresh",
-                                 label = "Run Algorithm", 
-                                 style = "unite",
-                                 color = "danger",
-                                 icon = icon("sync")
-                               )
+                    ## TODO: Uncomment this if we want to bring dropdown back again
+                    # dropdownButton(
+                    #   # box(width = 12, status = "danger", 
+                    #   #     tags$strong(h1("What's Next?")),
+                    #   #     helpText("Click widget for more information.")
+                    #   # ),
+                    #   # 
+                    #   
+                    #   circle = TRUE, status = "danger", right = FALSE,
+                    #   icon = icon("gear"), width = "350px",
+                    #   
+                    #   tooltip = tooltipOptions(title = "Click to see inputs !", 
+                    #                            placement = "right")
+                    # ),
+                    box(id = "control_box", width = 12, title = tagList(shiny::icon("gear"), "Toolkit"), 
+                        collapsible = TRUE, collapsed = TRUE, solidHeader = TRUE,
+                        fluidRow(
+                          column(width = 3, align = "left",
+                                 switchInput("show_all",
+                                             label = "Locations",
+                                             size = "mini",
+                                             onStatus = "success",
+                                             onLabel = "All",
+                                             offLabel = "",
+                                             value = TRUE)
+                                 ),
+                          column(width = 3, align = "left",
+                                 switchInput("show_legend",
+                                             label = "Legend",
+                                             size = "mini",
+                                             onStatus = "success",
+                                             value = TRUE)
+                          )
+                          
                         ),
-                        # Last Run Date
-                        column(width = 7,
-                               htmlOutput("last_run_date")
+                      tabsetPanel(
+                        tabPanel(title = "Recommendation",
+                                 #br(),
+                                 tags$strong(h1("What's Next?")),
+                                 helpText("Click widget in the map for more information."),
+                                 fluidRow(
+                                   # Refresh Button
+                                   column(width = 5, align="center",
+                                          actionBttn(
+                                            inputId = "refresh",
+                                            label = "Run Algorithm", 
+                                            style = "unite",
+                                            size = "sm",
+                                            color = "danger",
+                                            icon = icon("sync")
+                                          )
+                                   ),
+                                   # Last Run Date
+                                   column(width = 7, align="center",
+                                          htmlOutput("last_run_date")
+                                   )
+                                 ),
+                                 
+                                 br(),
+                                 
+                                 #ui_recommend_table(),
+                                 
+                                 selectizeInput(
+                                   inputId = "goto",
+                                   label = "Qucik view location",
+                                   choices = "",
+                                   multiple = FALSE,
+                                   options = list(
+                                     placeholder = 'Search/Select a location to view',
+                                     onInitialize = I('function() { this.setValue(""); }')
+                                   )
+                                 )
+                                             
+                        ),
+                        tabPanel(title = "Controls",
+                                 
+                                 # TODO: Update progress bar
+                                 progressBar(id = "assign_progress", value = 10,
+                                             total = 20, status = "danger", title = "Location assigned"),
+                                 
+                                 dateInput("map_date", label = "Show date"),
+                                 # TODO: Update the input option as well after selection
+                                 selectizeInput(
+                                   inputId = "assign_location_choice",
+                                   label = "Select locations to assign",
+                                   choices = LOCATION_SELECTION,
+                                   multiple = TRUE,
+                                   options = list(
+                                     placeholder = 'Search/Select locations or from the map',
+                                     onInitialize = I('function() { this.setValue(""); }')
+                                   )
+                                 ),
+                                 fluidRow(
+                                   column(width = 6, #align="center",
+                                          selectInput(
+                                            inputId = "assign_group_choice",
+                                            label = "Select group to assign",
+                                            choices = c(1:3), # TODO: update the group id
+                                            multiple = T
+                                          )),
+                                   column(width = 6, #align="center",
+                                          br(),
+                                          actionBttn("assign",
+                                                     label = "Assign to group",
+                                                     style = "unite", 
+                                                     color = "primary",
+                                                     size = 'sm'))
+                                 )
+                                 
+                                 
                         )
-                      ),
-                      
-                      br(),
-                      
-                      # Recommendations List
-                      # fluidRow(
-                      #   ui_recommend_table()
-                      # ),
-                      ui_recommend_table(),
-                      
-                      circle = TRUE, status = "danger", right = FALSE,
-                      icon = icon("gear"), width = "350px",
-                      
-                      tooltip = tooltipOptions(title = "Click to see inputs !", 
-                                               placement = "right")
+                      )
                     )
                     
         ),
@@ -81,13 +155,7 @@ ui_location_box <- function() {
            h3(textOutput("box_location_name")),
            tags$strong("Category: "), br(),
            tags$strong("Census Name & Number: "), br(),
-           tags$strong(textOutput("box_location_address")), br(),
-           #br(),
-           actionBttn(
-             inputId = "data_entry_button",
-             label = "Data Entry",
-             style = "unite", 
-             color = "primary")
+           tags$strong(textOutput("box_location_address"))
            ),
     column(width = 6,
            leafletOutput("box_location_map", height = 220)
@@ -114,26 +182,30 @@ ui_location_box <- function() {
 }
 ui_data_entry <- function() {
   fluidRow(
-    column(width = 6,
-      dateInput("entry_date", "Entry date: "),
-      selectInput(
-        inputId = "entry_location", label = "Entry location",
-        choices = LOCATION_SELECTION,
-        selected = "thompson library Columbus",
-        width = "400px"
-      ),
-      selectInput(
-        inputId = "entry_result", label = "Test result",
-        choices = c("Positive" = 1, "Negative" = 0),
-        selected = "Negative",
-        width = "400px"
-      ),
-      numericInput(inputId = "entry_group_id", label = "Group id", value = 1),
-      actionButton("submit", "Submit")
+    box(title = "Data Entry", width = 4, status = "danger",
+        dateInput("entry_date", "Entry date: "),
+        numericInput(inputId = "entry_group_id", label = "Group ID", value = 1),
+        selectInput(
+          inputId = "entry_location", label = "Entry location",
+          choices = LOCATION_SELECTION,
+          selected = "thompson library Columbus",
+          width = "400px"
+        ),
+        selectInput(
+          inputId = "entry_result", label = "Test result",
+          choices = c("Positive" = 1, "Negative" = 0),
+          selected = "Negative",
+          width = "400px"
+        ),
+        actionBttn(
+          inputId = "submit",
+          label = "Submit",
+          style = "unite", 
+          color = "primary")
     ),
-    column(width = 6,
-      DT::dataTableOutput("test_data_table")
-    )
+    box(title = "Location Test Data", width = 8, status = "info",
+        DT::dataTableOutput("test_data_table")
+        )
   )
 }
 ui_tab_location <- function() {
@@ -149,17 +221,7 @@ ui_tab_location <- function() {
     sidebarPanel(width = 12,
                  fluidRow(
                    column(width = 6,
-                          searchInput(
-                            inputId = "search", label = HTML("<strong>Search a region</strong>"),
-                            value = "thompson library Columbus",
-                            placeholder = "thompson library Columbus",
-                            btnSearch = icon("search"),
-                            btnReset = icon("remove"),
-                            width = "450px"
-                          )
-                        ),
-                   column(width = 6,
-                          selectInput(
+                          selectizeInput(
                             inputId = "select_search", label = HTML("<strong>Select a region</strong>"),
                             choices = LOCATION_SELECTION,
                             selected = "thompson library Columbus",
@@ -175,13 +237,33 @@ ui_tab_location <- function() {
   )
 }
 # ================ UI: Layout =====================================================
-ui <- navbarPage("SARS-COV-2 Mobile Testing", id = "nav", selected = "Regional Map",
+ui <- bootstrapPage(
+  navbarPage("SARS-COV-2 Mobile Testing", id = "nav", selected = "Regional Map",
   useShinydashboard(),
+  #useShinydashboardPlus(),
+  useShinyjs(),
+  useSweetAlert(),
   collapsible = TRUE,
   theme = shinytheme("yeti"),
   tags$head(
     # Include our custom CSS
-    includeCSS("styles.css")
+    #includeCSS("styles.css")
+    tags$style(type = "text/css", 
+    "div.outer {
+      position: fixed;
+      top: 41px;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      overflow: hidden;
+      padding: 0;}
+    body, label, input, button, select { 
+    font-family: 'Helvetica Neue', Helvetica;
+    font-weight: 200;
+    } h1, h2, h3, h4 { font-weight: 400; }
+    #control_box {
+      opacity: 0.85;
+    }")
   ),
   tags$style("@import url(https://use.fontawesome.com/releases/v5.7.2/css/all.css);"),
   
@@ -192,15 +274,15 @@ ui <- navbarPage("SARS-COV-2 Mobile Testing", id = "nav", selected = "Regional M
            ui_tab_location()
            ),
   tabPanel("Instructions")
-)
+  
+  #dateInput("test_date", "Select a date")
+  #moves navbar right
+  
+))
 
 
 server <- function(input, output, session) {
   
-  location_data <- reactive({
-    # TODO: PSEUDO DATA
-    return(pseudo_data)
-  })
   
   location_data <- reactive({
     # TODO: PSEUDO DATA
@@ -234,22 +316,25 @@ server <- function(input, output, session) {
   # ===================================================== #
   # ================ Recommendation Table ===============
   # ===================================================== #
-  output$recommend_table<- renderFormattable({
-    DISPLAY_NUMBER <- 3
-    algo_recommendation <- recommendation_data()
-    algo_recommendation %>%
-      rename(`Recommended Location (top 3)` = formatted_address, `Confidence` = confidence) %>%
-      arrange(-Confidence) %>%
-      head(DISPLAY_NUMBER) %>%
-      mutate(Confidence = percent(Confidence)) %>%
-      formattable(align = c("l", "c"),
-      list(
-        `Recommended Location (top 3)` = 
-          formatter("span", style = ~ style(color = "grey",font.weight = "bold")),
-        `Confidence` = color_tile(customGreen0, customGreen)
-      )
-    )
-  })
+  # output$recommend_table<- renderFormattable({
+  #   DISPLAY_NUMBER <- 3
+  #   algo_recommendation <- recommendation_data()
+  #   algo_recommendation %>%
+  #     rename(`Recommendation` = location_name, 
+  #            `Address`  =formatted_address,
+  #            `Confidence` = confidence) %>%
+  #     arrange(-Confidence) %>%
+  #     head(DISPLAY_NUMBER) %>%
+  #     mutate(Confidence = percent(Confidence)) %>%
+  #     formattable(align = c("l", "c"),
+  #     list(
+  #       `Recommendation` = 
+  #         formatter("span", style = ~ style(color = "black",font.weight = "bold")),
+  #       `Address` = formatter("span", style = ~ style(color = "grey")),
+  #       `Confidence` = color_tile(customGreen0, customGreen)
+  #     )
+  #   )
+  # })
   # ===================================================== #
   # ================ Main Regional Map ==================
   # ===================================================== #
@@ -282,14 +367,16 @@ server <- function(input, output, session) {
     # Map ------------------------------------------------------------------------ #
     leaflet(data = location_info,
             options = leafletOptions(zoomControl = FALSE, attributionControl=FALSE)) %>%
-      #addTiles() %>%
+      # Tiles
       addProviderTiles(providers$Stamen.Toner) %>%
+      # Markers: All
       addAwesomeMarkers(
         ~lng, ~lat,
         layerId = ~location_name,
         icon=icons,
         popup = ~popup_content
       ) %>%
+      # Circles: All
       addCircles(
         ~lng, ~lat,
         weight = 2, color = "black",
@@ -300,15 +387,6 @@ server <- function(input, output, session) {
         #opacity = ~ positivity, #~expit(positivity),
         #fillOpacity = ~positivity,
         radius = ~normalize(test_number, min = RADIUS_MIN, max = RADIUS_MAX)) %>%
-      # addCircles(
-      #   ~lng, ~lat,
-      #   weight = 2, color = "black", 
-      #   fillColor = ~pal(positivity), stroke = TRUE,
-      #   labelOptions = labelOptions(noHide = F, direction = 'auto'),
-      #   options = markerOptions(riseOnHover = TRUE),
-      #   #opacity = ~ positivity, #~expit(positivity),
-      #   #fillOpacity = ~positivity,
-      #   radius = ~normalize(total_test, min = RADIUS_MIN, max = RADIUS_MAX)) %>% 
       addLegend(
         pal = pal, values = ~positivity, 
         opacity = 0.7, title = "Positivity", position = "topright",
@@ -318,44 +396,125 @@ server <- function(input, output, session) {
           )
         )
   })
+  # Show/Hide Legend
+  observeEvent(input$show_legend, {
+    location_info <- location_data()
+    #bins <- c(0, 0.02, 0.05, 0.07, 0.10, 0.12, 0.15, 0.17, 0.20, 1)
+    pal <- colorBin("YlOrRd", domain = location_info$positivity, bins = 5)
+    RADIUS_MIN <- 300
+    RADIUS_MAX <- 900
+    
+    popup_content <- 
+      location_info %>% 
+      select(address, location_name, test_number, positivity) %>%
+      pmap_chr(get_pop_content)
+    location_info <- 
+      location_info %>%
+      mutate(popup_content = popup_content)
+    
+    proxy <- leafletProxy("regional_map", data = location_info)
+    
+    # Remove any existing legend, and only if the legend is
+    # enabled, create a new one.
+    proxy %>% clearControls()
+    if (input$show_legend) {
+      pal <- pal
+      proxy %>% addLegend(
+        pal = pal, values = ~positivity, 
+        opacity = 0.7, title = "Positivity", position = "topright",
+        labFormat = labelFormat(
+          prefix = "(", suffix = ")%", between = ", ",
+          transform = function(x) 100 * x
+        )
+      )
+    }
+  })
   # ===================================================== #
   # ================ Main map click event ===============
   # ===================================================== #
+  
+  # ----------------------------- Map click ------------------------------------ #
   observeEvent(input$regional_map_marker_click, { 
     p <- input$regional_map_marker_click
     # output$Click_text <- renderText({
     #   p$id
     # })
-    updateSearchInput(
+    current_location_selection <- input$assign_location_choice
+    updated_location_selection <- c(p$id, current_location_selection)
+    updateSelectizeInput(
       session = session,
-      inputId = "search",
-      value = p$id,
-      trigger = TRUE
+      inputId = "assign_location_choice",
+      selected = updated_location_selection
     )
-    updateSelectInput(
+    # updateSearchInput(
+    #   session = session,
+    #   inputId = "search",
+    #   value = p$id,
+    #   trigger = TRUE
+    # )
+    updateSelectizeInput(
       session = session,
       inputId = "select_search",
       selected = p$id
     )
-    updateSelectInput(
+    updateSelectizeInput(
       session = session,
       inputId = "entry_location",
       selected = p$id
     )
     #print(p)
   }, ignoreInit = TRUE)
+  
+  # --------------------------------Goto ------------------------------------- #
+  observe({
+    goto_location_name <- str_extract(input$goto, "[^:]+")
+    isolate(
+      goto_location_info <- location_data() %>%
+        filter(location_name == goto_location_name)
+    )
+    goto_lat <- goto_location_info %>% pull(lat)
+    goto_lng <- goto_location_info %>% pull(lng)
+    #cat(goto_lat, goto_lng)
+    proxy <- leafletProxy("regional_map")
+    proxy %>% setView(lng = goto_lng, lat = goto_lat, zoom = 15)
+  })
   # ===================================================== #
   # ================ Search input update event ==========
   # ===================================================== #
+  
+  observe({
+    recommendation_df <- recommendation_data()
+    location_df <- location_data()
+    
+    algo_recommendation_location <- 
+      recommendation_df %>%
+      rename(address = formatted_address) %>%
+      # Sort by confidence
+      arrange(-confidence) %>%
+      mutate(
+        pct_confidence = percent(confidence),
+        location_confidence = glue::glue("{location_name}: {pct_confidence}")
+      ) %>%
+      pull(location_confidence)
+    other_reommendation_location <- 
+      location_df %>%
+      pull(location_name) %>%
+      setdiff(., recommendation_df$location_name )
+    updateSelectizeInput(
+      session = session, 
+      inputId = "goto",
+      #selected = algo_recommendation_location[1],
+      choices = list(
+        `Recommendation` = algo_recommendation_location,
+        `Other Location` = other_reommendation_location
+      )
+    )
+    
+  })
+  
   observe({
     selection <- input$select_search
-    updateSearchInput(
-      session = session,
-      inputId = "search",
-      value = selection,
-      trigger = TRUE
-    )
-    updateSelectInput(
+    updateSelectizeInput(
       session = session,
       inputId = "entry_location",
       selected = selection
@@ -364,7 +523,7 @@ server <- function(input, output, session) {
   
   # Observe search input
   observe({
-    target_region <- input$search
+    target_region <- input$select_search
     location_info <- location_data() %>%
       filter(location_name == target_region)
     output$box_location_name <- renderText({
@@ -445,11 +604,17 @@ server <- function(input, output, session) {
   
   observeEvent(input$submit,{
     saveData(entry_data())
+    sendSweetAlert(
+      session = session,
+      title = "Success !!",
+      text = "Data recieved",
+      type = "success"
+    )
   })
 
   output$test_data_table <- DT::renderDataTable({
     input$submit
-    location <- input$select_search
+    location <- input$entry_location
     loadData() %>%
       as_tibble() %>%
       mutate(
