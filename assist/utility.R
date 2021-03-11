@@ -1,7 +1,13 @@
+library(tidyverse)
+library(lubridate)
+library(rdrop2)
 library(DBI)
 library(RSQLite)
 sqlitePath <- "data/banditdb.sqlite"
-TEST_TABLE <- "tests"
+token <- readRDS("droptoken.rds")
+drop_auth(rdstoken = "droptoken.rds")
+DROPBOX_TEST_DATA_PATH <- "Bandit/test data"
+DROPBOX_ASSIGNMENT_DATA_PATH <- "Bandit/assignment"
 
 
 logit <- function(p) {
@@ -16,20 +22,47 @@ expit <- function(etas) {
   )
 }
 
-get_pop_content <- function(address, location_name, test_number, positivity) {
+get_pop_content <- function(address, location_name, 
+                            total, positivity, assigned, group_id, recommended) {
+
+  assign_status <- function(assigned, group_id) {
+    if (assigned) {
+      #tags$span(style="color:green",tags$strong(paste0("Assigned to Group#", group_id)))
+      paste0("Assigned to Group#", group_id)
+    } else {
+      #tags$span(style="color:gray",tags$strong("Unassigned"))
+      "Unassigned"
+    }
+  }
+  
+  recommend_status <- function(recommended) {
+    if (recommended) {
+      #tags$span(style="color:red",tags$strong(tags$strong("Yes")))
+      "Yes"
+    } else {
+      #tags$span(style="color:gray",tags$strong("No"))
+      "No"
+    }
+  }
+  
   
   content <- 
     paste(
     tags$h4(tags$strong(location_name)),
     address, br(),
-    tags$strong("Number of test: "), tags$u(test_number), "    ",
-    tags$strong("Positivity: "), tags$u(percent(positivity))
+    tags$strong("Number of test: "), tags$u(total), "    ",
+    tags$strong("Positivity: "), tags$u(percent(positivity)), br(),
+    tags$strong("Recommend Status: ", recommend_status(recommended)), br(),
+    tags$strong("Assign Status: ", assign_status(assigned, group_id))
   )
   return(content)
 }
 
+# ==================================================================== #
+# ----------------------- Database Management ------------------------
+# ==================================================================== #
 
-saveData <- function(data) {
+saveData_SQLite <- function(data) {
   # Connect to the database
   db <- dbConnect(SQLite(), sqlitePath)
   # Construct the update query by looping over the data fields
@@ -44,7 +77,7 @@ saveData <- function(data) {
   dbDisconnect(db)
 }
 
-loadData <- function() {
+loadData_SQLite <- function() {
   # Connect to the database
   db <- dbConnect(SQLite(), sqlitePath)
   # Construct the fetching query
@@ -54,4 +87,72 @@ loadData <- function() {
   dbDisconnect(db)
   data
 }
+
+# Read in tibble
+saveData_Dropbox <- function(data) {
+  
+  fileName <- paste0("test_data_entry_", 
+                     as.character(Sys.time()), ".csv")
+  filePath <- file.path(tempdir(), fileName)
+  write_csv(data, filePath)
+  drop_upload(filePath, path = DROPBOX_TEST_DATA_PATH)
+}
+
+loadData_Dropbox <- function() {
+  # Read all the files into a list
+  filesInfo <- drop_dir(DROPBOX_TEST_DATA_PATH)
+  filePaths <- filesInfo$path_display
+  
+  data <- map_df(
+    filePaths, 
+    drop_read_csv,
+    stringsAsFactors = FALSE
+  )
+  return(data)
+}
+
+saveAssignment_Dropbox <- function(data) {
+  
+  fileName <- paste0("assignment_entry", 
+                     "_", as.character(Sys.time()), ".csv")
+  filePath <- file.path(tempdir(), fileName)
+  write_csv(data, filePath)
+  drop_upload(filePath, path = DROPBOX_ASSIGNMENT_DATA_PATH)
+}
+
+loadAssigment_Dropbox <- function() {
+  # Read all the files into a list
+  filesInfo <- drop_dir(DROPBOX_ASSIGNMENT_DATA_PATH)
+  filePaths <- filesInfo$path_display
+  
+  data <- map_df(
+    filePaths, 
+    drop_read_csv,
+    stringsAsFactors = FALSE
+  )
+  data <- data %>%
+    mutate(
+      date = ymd(date)
+    )
+  return(data)
+}
+
+
+# ==================================================================== #
+# ----------------------- Algorithm Recommendation ------------------------
+# ==================================================================== #
+
+get_recommend_location <- function() {
+  return(recommendation_data)
+}
+
+
+
+
+
+
+
+
+
+
 
