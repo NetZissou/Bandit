@@ -95,7 +95,9 @@ saveData_Dropbox <- function(data) {
                      as.character(Sys.time()), ".csv")
   filePath <- file.path(tempdir(), fileName)
   write_csv(data, filePath)
-  drop_upload(filePath, path = DROPBOX_TEST_DATA_PATH)
+  suppressMessages(
+    drop_upload(filePath, path = DROPBOX_TEST_DATA_PATH)
+  )
 }
 
 loadData_Dropbox <- function() {
@@ -103,10 +105,12 @@ loadData_Dropbox <- function() {
   filesInfo <- drop_dir(DROPBOX_TEST_DATA_PATH)
   filePaths <- filesInfo$path_display
   
-  data <- map_df(
-    filePaths, 
-    drop_read_csv,
-    stringsAsFactors = FALSE
+  data <- suppressMessages(
+    map_df(
+      filePaths, 
+      drop_read_csv,
+      stringsAsFactors = FALSE
+    )
   )
   return(data)
 }
@@ -117,7 +121,9 @@ saveAssignment_Dropbox <- function(data) {
                      "_", as.character(Sys.time()), ".csv")
   filePath <- file.path(tempdir(), fileName)
   write_csv(data, filePath)
-  drop_upload(filePath, path = DROPBOX_ASSIGNMENT_DATA_PATH)
+  suppressMessages(
+    drop_upload(filePath, path = DROPBOX_ASSIGNMENT_DATA_PATH)
+  )
 }
 
 loadAssigment_Dropbox <- function() {
@@ -125,10 +131,12 @@ loadAssigment_Dropbox <- function() {
   filesInfo <- drop_dir(DROPBOX_ASSIGNMENT_DATA_PATH)
   filePaths <- filesInfo$path_display
   
-  data <- map_df(
-    filePaths, 
-    drop_read_csv,
-    stringsAsFactors = FALSE
+  data <- suppressMessages(
+    map_df(
+      filePaths, 
+      drop_read_csv,
+      stringsAsFactors = FALSE
+    )
   )
   data <- data %>%
     mutate(
