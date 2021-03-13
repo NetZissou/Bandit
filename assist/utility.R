@@ -8,7 +8,7 @@ token <- readRDS("droptoken.rds")
 drop_auth(rdstoken = "droptoken.rds")
 DROPBOX_TEST_DATA_PATH <- "Bandit/test data"
 DROPBOX_ASSIGNMENT_DATA_PATH <- "Bandit/assignment"
-
+DROPBOX_ASSIGNMENT_CLEANED_DATA_PATH <- "Bandit/assignment_cleaned"
 
 logit <- function(p) {
   return(
@@ -53,7 +53,10 @@ get_pop_content <- function(address, location_name,
     tags$strong("Number of test: "), tags$u(total), "    ",
     tags$strong("Positivity: "), tags$u(percent(positivity)), br(),
     tags$strong("Recommend Status: ", recommend_status(recommended)), br(),
-    tags$strong("Assign Status: ", assign_status(assigned, group_id))
+    tags$strong("Assign Status: ", assign_status(assigned, group_id)), br(),
+    actionLink(inputId = "modal", 
+               label = "Assign / Unassign", 
+               onclick = 'Shiny.setInputValue(\"button_click\", this.id, {priority: \"event\"})')
   )
   return(content)
 }
@@ -126,25 +129,96 @@ saveAssignment_Dropbox <- function(data) {
   )
 }
 
+
 loadAssigment_Dropbox <- function() {
+  data <- tibble(
+    group_id = numeric(),
+    location_name = character(),
+    date = Date(),
+    assign_datetime = Date()
+  )
   # Read all the files into a list
   filesInfo <- drop_dir(DROPBOX_ASSIGNMENT_DATA_PATH)
-  filePaths <- filesInfo$path_display
+  if (nrow(filesInfo) > 0) {
+    filePaths <- filesInfo$path_display
+    
+    data <- suppressMessages(
+      map_df(
+        filePaths, 
+        drop_read_csv,
+        stringsAsFactors = FALSE
+      )
+    )
+    data <- data %>%
+      as_tibble() %>%
+      mutate(
+        date = ymd(date),
+        assign_datetime = ymd_hms(assign_datetime)
+      ) %>%
+      group_by(
+        location_name, date
+      ) %>%
+      filter(assign_datetime == max(assign_datetime)) %>%
+      ungroup() %>%
+      filter(group_id > 0)
+  } 
+  return(data)
+}
+
+
+saveAssignment_Dropbox_cleaned <- function(entry_data, cleaned_data) {
   
-  data <- suppressMessages(
-    map_df(
+  cleaned_data <- cleaned_data %>%
+    bind_rows(
+      entry_data %>%
+        mutate(
+          group_id = as.numeric(group_id)
+        )
+    ) %>%
+    mutate(
+      date = ymd(date),
+      assign_datetime = ymd_hms(assign_datetime)
+    ) %>%
+    group_by(
+      location_name, date
+    ) %>%
+    filter(assign_datetime == max(assign_datetime)) %>%
+    ungroup() %>%
+    filter(group_id > 0)
+  fileName <- paste0("assignment_entry.csv")
+  filePath <- file.path(tempdir(), fileName)
+  write_csv(cleaned_data, filePath)
+  #suppressMessages(
+    drop_upload(filePath, path = DROPBOX_ASSIGNMENT_CLEANED_DATA_PATH)
+  #)
+}
+
+loadAssigment_Dropbox_cleaned <- function() {
+  data <- tibble(
+    group_id = numeric(),
+    location_name = character(),
+    date = Date(),
+    assign_datetime = Date()
+  )
+  # Read all the files into a list
+  filesInfo <- drop_dir(DROPBOX_ASSIGNMENT_CLEANED_DATA_PATH)
+  if (nrow(filesInfo) > 0) {
+    filePaths <- filesInfo$path_display
+    
+    data <- map_df(
       filePaths, 
       drop_read_csv,
       stringsAsFactors = FALSE
     )
-  )
-  data <- data %>%
-    mutate(
-      date = ymd(date)
-    )
+    data <- data %>%
+      as_tibble() %>%
+      mutate(
+        date = ymd(date),
+        assign_datetime = ymd_hms(assign_datetime)
+      )
+  } 
   return(data)
 }
-
 
 # ==================================================================== #
 # ----------------------- Algorithm Recommendation ------------------------

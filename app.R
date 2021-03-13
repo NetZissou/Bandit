@@ -270,11 +270,16 @@ server <- function(input, output, session) {
     recent_test <- loadData_Dropbox()
     return(recent_test)
   })
-  assignment_data <- reactive({
-    input$assign
-    recent_assignment <- loadAssigment_Dropbox()
-    return(recent_assignment)
-  })
+  assignment_data <- reactiveValues(
+    data = loadAssigment_Dropbox_cleaned()
+  )
+  observeEvent(input$assign, {
+    assignment_data$data = loadAssigment_Dropbox_cleaned()
+  }, priority = -1)
+  observeEvent(input$ok, {
+    assignment_data$data = loadAssigment_Dropbox_cleaned()
+  }, priority = -2)
+  
   
   map_info <- reactive({
     # --------------------------------- #
@@ -301,7 +306,7 @@ server <- function(input, output, session) {
     
     # assignment)
     selected_date <- input$map_date
-    assignment <- assignment_data() %>%
+    assignment <- assignment_data$data %>%
       filter(date == ymd(selected_date))
     
     location_info <- location_info %>%
@@ -350,14 +355,76 @@ server <- function(input, output, session) {
     return(map_info_recommened_list)
   })
   
-  # output$last_run_date <- renderUI({
-  #   
-  #   date <- as.character(Sys.Date())
-  #   text <- paste0(
-  #     tags$strong("Last Run: "), tags$u(date)
-  #   )
-  #   return(HTML(text))
-  # })
+  last_click_location <- reactive({
+    p <- input$regional_map_marker_click
+    return(p$id)
+  })
+  
+  observeEvent(input$button_click, {
+    clicked_location <- last_click_location()
+    showModal(modalDialog(
+      title = paste0("Assign / UnAssign ", clicked_location),
+      textInput("click_assign_location", "Location",value = clicked_location),
+      selectInput("click_assign_group", "Select group to assign (or unassign)",
+                  selected = "Select",
+                  choices = set_names(c("Select",  0, group_info$group_id),
+                                      c("Select",  "Unassign", group_info$group_id)),
+                  multiple = F),
+      footer = tagList(
+        modalButton("Cancel"),
+        actionButton("ok", "OK")
+      )
+    ))
+  })
+  
+  click_assign_entry <- reactive({
+
+    assign_group <- input$click_assign_group
+    assign_location <- input$click_assign_location
+    assign_date <- input$map_date
+    
+    data <- tibble(
+      group_id = numeric(),
+      location_name = character(),
+      date = Date(),
+      assign_datetime = Date()
+    )
+    
+    if (assign_group != "Select") {
+      data <- tibble(
+        group_id = assign_group,
+        location_name = assign_location,
+        date = assign_date,
+        assign_datetime = Sys.time()
+      )
+    }
+    return(data)
+  })
+  
+  observeEvent(input$ok,{
+    freezeReactiveValue(input, "")
+    removeModal()
+    data <- isolate(click_assign_entry())
+    if (nrow(data) > 0) {
+      saveAssignment_Dropbox_cleaned(entry_data = data, 
+                                     cleaned_data = assignment_data$data)
+      
+      sendSweetAlert(
+        session = session,
+        title = "SUCCESS !!",
+        text = "Task assigned",
+        type = "success"
+      )  
+    } else {
+      sendSweetAlert(
+        session = session,
+        title = "INVALID",
+        text = "Please assign at least one team",
+        type = "warning"
+      )  
+    }
+    
+  }, priority = 2)
   
   # ===================================================== #
   # ---------------- Assignment Table -------------------
@@ -372,8 +439,9 @@ server <- function(input, output, session) {
     assignment_table_data$assignment[i] <- 
       as.character(
         selectInput(paste0("sel", i), "",
-                    selected = "Assign",
-                    choices = c("Assign",  group_info$group_id),
+                    selected = "Select",
+                    choices = set_names(c("Select",  0, group_info$group_id),
+                                        c("Select",  "Unassign", group_info$group_id)),
                     multiple = F,
                     width = "80px"))
   }
@@ -402,29 +470,32 @@ server <- function(input, output, session) {
     assign_list <- 
       sapply(1:nrow(assignment_table_data), function(i) input[[paste0("sel", i)]])
     
-    assigned_index <- which(assign_list != "Assign")
+    assigned_index <- which(assign_list != "Select")
     assign_date <- input$map_date
+    data <- tibble(
+      group_id = numeric(),
+      location_name = character(),
+      date = Date(),
+      assign_datetime = Date()
+    )
     if (length(assigned_index) > 0) {
       data <- tibble(
         group_id = unlist(assign_list)[assigned_index],
         location_name = assignment_table_data[assigned_index,]$Location,
-        date = ymd(assign_date)
-      )
-    } else {
-      data <- tibble(
-        group_id = numeric(),
-        location_name = character(),
-        date = Date()
+        date = ymd(assign_date),
+        assign_datetime = Sys.time()
       )
     }
     return(data)
   })
   
+  
   observeEvent(input$assign,{
     
     data <- isolate(assign_entry())
     if (nrow(data) > 0) {
-      saveAssignment_Dropbox(data)
+      saveAssignment_Dropbox_cleaned(entry_data = data, 
+                                     cleaned_data = assignment_data$data)
       
       sendSweetAlert(
         session = session,
@@ -441,7 +512,7 @@ server <- function(input, output, session) {
       )  
     }
     
-  })
+  }, priority = 2)
   
   # ===================================================== #
   # ================ Main Regional Map ==================
