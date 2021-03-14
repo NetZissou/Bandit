@@ -7,6 +7,7 @@ sqlitePath <- "data/banditdb.sqlite"
 token <- readRDS("droptoken.rds")
 drop_auth(rdstoken = "droptoken.rds")
 DROPBOX_TEST_DATA_PATH <- "Bandit/test data"
+DROPBOX_TEST_CLEANED_DATA_PATH <- "Bandit/test_cleaned"
 DROPBOX_ASSIGNMENT_DATA_PATH <- "Bandit/assignment"
 DROPBOX_ASSIGNMENT_CLEANED_DATA_PATH <- "Bandit/assignment_cleaned"
 
@@ -113,7 +114,11 @@ loadData_Dropbox <- function() {
       filePaths, 
       drop_read_csv,
       stringsAsFactors = FALSE
-    )
+    )  %>%
+      mutate(
+        date = ymd(date)
+      ) %>%
+      as_tibble()
   )
   return(data)
 }
@@ -163,6 +168,79 @@ loadAssigment_Dropbox <- function() {
       filter(group_id > 0)
   } 
   return(data)
+}
+
+
+# ==================================================================== #
+# -------------------- Database Management Cleaned -------------------
+# ==================================================================== #
+
+loadData_Dropbox_cleaned <- function() {
+  
+  data <- tibble(
+    group_id = numeric(),
+    location_name = character(),
+    date = Date(),
+    start_time = POSIXct(),
+    end_time = POSIXct(),
+    positive = numeric(),
+    total = numeric(),
+    note = character()
+  )
+  
+  # Read all the files into a list
+  filesInfo <- drop_dir(DROPBOX_TEST_CLEANED_DATA_PATH)
+  if (nrow(filesInfo) > 0) {
+    filePaths <- filesInfo$path_display
+    
+    # data <- suppressMessages(
+    #   map_df(
+    #     filePaths, 
+    #     drop_read_csv,
+    #     stringsAsFactors = FALSE
+    #   ) %>%
+    #     mutate(
+    #       date = ymd(date)
+    #     ) %>%
+    #     as_tibble()
+    # )
+    data <- map_df(
+      filePaths, 
+      drop_read_csv,
+      stringsAsFactors = FALSE
+    ) %>%
+      mutate(
+        date = ymd(date),
+        start_time = as_datetime(start_time),
+        end_time = as_datetime(end_time)
+      ) %>%
+      as_tibble()
+    
+  }
+  return(data)
+}
+
+saveData_Dropbox_cleaned <- function(entry_data, cleaned_data) {
+  
+  # Save Single instance
+  fileName <- paste0("test_data_entry_",
+                     as.character(Sys.time()), ".csv")
+  filePath <- file.path(tempdir(), fileName)
+  write_csv(entry_data, filePath)
+  suppressMessages(
+    drop_upload(filePath, path = DROPBOX_TEST_DATA_PATH)
+  )
+  # Save appened version
+  cleaned_data <- cleaned_data %>%
+    bind_rows(
+      entry_data
+    )
+  cleanedFileName <- paste0("test_data_entry.csv")
+  cleanedFilePath <- file.path(tempdir(), cleanedFileName)
+  write_csv(cleaned_data, cleanedFilePath)
+  #suppressMessages(
+    drop_upload(cleanedFilePath, path = DROPBOX_TEST_CLEANED_DATA_PATH)
+  #)
 }
 
 
@@ -221,7 +299,7 @@ loadAssigment_Dropbox_cleaned <- function() {
 }
 
 # ==================================================================== #
-# ----------------------- Algorithm Recommendation ------------------------
+# ----------------------- Algorithm Recommendation -------------------
 # ==================================================================== #
 
 get_recommend_location <- function() {
