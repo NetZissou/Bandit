@@ -156,20 +156,20 @@ ui_data_entry <- function() {
         dateInput("entry_date", "Entry date: "),
         fluidRow(
           column(width = 6,
-                 timeInput("entry_start_time", "Start time: ", value = Sys.time(), seconds = FALSE)
+                 timeInput("entry_start_time", "Start time: ", seconds = FALSE, value = Sys.time())
           ),
           column(width = 6,
-                 timeInput("entry_end_time", "Start time: ", value = Sys.time(), seconds = FALSE)
+                 timeInput("entry_end_time", "End time: ", seconds = FALSE)
           )
         ),
         numericInput(inputId = "entry_group_id", label = "Group ID", value = 1),
         
         fluidRow(
           column(width = 6,
-                 numericInput("entry_positive", "Positives: ", value = 0)
+                 numericInput("entry_positive", "Positives: ", value = 0, min = 0)
           ),
           column(width = 6,
-                 numericInput("entry_total", "Total tests: ", value = 0)
+                 numericInput("entry_total", "Total tests: ", value = 0, min = 0)
           )
         ),
         textAreaInput("entry_note", "Addition Note: ", 
@@ -337,7 +337,13 @@ server <- function(input, output, session) {
       pmap_chr(get_pop_content)
     location_info <- 
       location_info %>%
-      mutate(popup_content = popup_content)
+      mutate(
+        popup_content = popup_content,
+        label_content = ifelse(assigned, 
+                               paste0('Assigned to group#', group_id),
+                               'Unassigned'
+                               )
+      )
     
     map_info_list <- list(
       location_info = location_info,
@@ -360,71 +366,6 @@ server <- function(input, output, session) {
     return(p$id)
   })
   
-  observeEvent(input$button_click, {
-    clicked_location <- last_click_location()
-    showModal(modalDialog(
-      title = paste0("Assign / UnAssign ", clicked_location),
-      textInput("click_assign_location", "Location",value = clicked_location),
-      selectInput("click_assign_group", "Select group to assign (or unassign)",
-                  selected = "Select",
-                  choices = set_names(c("Select",  0, group_info$group_id),
-                                      c("Select",  "Unassign", group_info$group_id)),
-                  multiple = F),
-      footer = tagList(
-        modalButton("Cancel"),
-        actionButton("ok", "OK")
-      )
-    ))
-  })
-  
-  click_assign_entry <- reactive({
-
-    assign_group <- input$click_assign_group
-    assign_location <- input$click_assign_location
-    assign_date <- input$map_date
-    
-    data <- tibble(
-      group_id = numeric(),
-      location_name = character(),
-      date = Date(),
-      assign_datetime = Date()
-    )
-    
-    if (assign_group != "Select") {
-      data <- tibble(
-        group_id = assign_group,
-        location_name = assign_location,
-        date = assign_date,
-        assign_datetime = Sys.time()
-      )
-    }
-    return(data)
-  })
-  
-  observeEvent(input$ok,{
-    freezeReactiveValue(input, "")
-    removeModal()
-    data <- isolate(click_assign_entry())
-    if (nrow(data) > 0) {
-      saveAssignment_Dropbox_cleaned(entry_data = data, 
-                                     cleaned_data = assignment_data$data)
-      
-      sendSweetAlert(
-        session = session,
-        title = "SUCCESS !!",
-        text = "Task assigned",
-        type = "success"
-      )  
-    } else {
-      sendSweetAlert(
-        session = session,
-        title = "INVALID",
-        text = "Please assign at least one team",
-        type = "warning"
-      )  
-    }
-    
-  }, priority = 2)
   
   # ===================================================== #
   # ---------------- Assignment Table -------------------
@@ -555,7 +496,11 @@ server <- function(input, output, session) {
         ~lng, ~lat,
         layerId = ~location_name,
         icon= ~pin_icons[icon_type],
-        popup = ~popup_content
+        popup = ~popup_content,
+        label = ~label_content,
+        labelOptions = labelOptions(
+          noHide = F, textsize = "15px", opacity = 0.85
+          )
       ) %>%
       # Circles: All
       addCircles(
@@ -594,7 +539,11 @@ server <- function(input, output, session) {
           ~lng, ~lat,
           layerId = ~location_name,
           icon= ~pin_icons[icon_type],
-          popup = ~popup_content
+          popup = ~popup_content,
+          label = ~label_content,
+          labelOptions = labelOptions(
+            noHide = F, textsize = "15px", opacity = 0.85
+          )
         ) %>%
         # Circles: All
         addCircles(
@@ -629,7 +578,11 @@ server <- function(input, output, session) {
           ~lng, ~lat,
           layerId = ~location_name,
           icon= ~pin_icons[icon_type],
-          popup = ~popup_content
+          popup = ~popup_content,
+          label = ~label_content,
+          labelOptions = labelOptions(
+            noHide = F, textsize = "15px", opacity = 0.85
+          )
         ) %>%
         # Circles: All
         addCircles(
@@ -752,6 +705,73 @@ server <- function(input, output, session) {
     )
     
   })
+  
+  # ------------------------------- MMAP Click assign ------------------------ #
+  observeEvent(input$button_click, {
+    clicked_location <- last_click_location()
+    showModal(modalDialog(
+      title = paste0("Assign / UnAssign ", clicked_location),
+      textInput("click_assign_location", "Location",value = clicked_location),
+      selectInput("click_assign_group", "Select group to assign (or unassign)",
+                  selected = "Select",
+                  choices = set_names(c("Select",  0, group_info$group_id),
+                                      c("Select",  "Unassign", group_info$group_id)),
+                  multiple = F),
+      footer = tagList(
+        modalButton("Cancel"),
+        actionButton("ok", "OK")
+      )
+    ))
+  })
+  
+  click_assign_entry <- reactive({
+    
+    assign_group <- input$click_assign_group
+    assign_location <- input$click_assign_location
+    assign_date <- input$map_date
+    
+    data <- tibble(
+      group_id = numeric(),
+      location_name = character(),
+      date = Date(),
+      assign_datetime = Date()
+    )
+    
+    if (assign_group != "Select") {
+      data <- tibble(
+        group_id = assign_group,
+        location_name = assign_location,
+        date = assign_date,
+        assign_datetime = Sys.time()
+      )
+    }
+    return(data)
+  })
+  
+  observeEvent(input$ok,{
+    #freezeReactiveValue(input, "")
+    removeModal()
+    data <- isolate(click_assign_entry())
+    if (nrow(data) > 0) {
+      saveAssignment_Dropbox_cleaned(entry_data = data,
+                                     cleaned_data = assignment_data$data)
+
+      sendSweetAlert(
+        session = session,
+        title = "SUCCESS !!",
+        text = "Task assigned",
+        type = "success"
+      )
+    } else {
+      sendSweetAlert(
+        session = session,
+        title = "INVALID",
+        text = "Please assign at least one team",
+        type = "warning"
+      )
+    }
+
+  })
   # ===================================================== #
   # ================ Search input update event ==========
   # ===================================================== #
@@ -789,27 +809,13 @@ server <- function(input, output, session) {
           ~lng, ~lat,
           layerId = ~location_name,
           icon= ~pin_icons[icon_type],
-          popup = ~popup_content
+          popup = ~popup_content,
+          label = ~label_content,
+          labelOptions = labelOptions(
+            noHide = F, textsize = "15px", opacity = 0.85
+          )
         )
     })
-    # output$box_number_of_test <-renderValueBox({
-    #   valueBox(
-    #     value = location_info$test_number,
-    #     subtitle = "Test number",
-    #     icon = icon("code"),
-    #     width = 12,
-    #     color = "red",
-    #     href = NULL)
-    # })
-    # output$box_positivity <- renderValueBox({
-    #   valueBox(
-    #     value = location_info$positivity,
-    #     subtitle = "Positivity",
-    #     icon = icon("code"),
-    #     width = 12,
-    #     color = "red",
-    #     href = NULL)
-    # })
     output$box_positivity <- renderText({
       as.character(percent(location_info$positivity))
     })
