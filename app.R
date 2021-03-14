@@ -156,10 +156,12 @@ ui_data_entry <- function() {
         dateInput("entry_date", "Entry date: "),
         fluidRow(
           column(width = 6,
-                 timeInput("entry_start_time", "Start time: ", seconds = FALSE, value = Sys.time())
+                 timeInput("entry_start_time", "Start time: ", 
+                           seconds = FALSE, value = Sys.time()-hours(6))
           ),
           column(width = 6,
-                 timeInput("entry_end_time", "End time: ", seconds = FALSE)
+                 timeInput("entry_end_time", "End time: ", 
+                           seconds = FALSE, value = Sys.time())
           )
         ),
         numericInput(inputId = "entry_group_id", label = "Group ID", value = 1),
@@ -265,11 +267,17 @@ server <- function(input, output, session) {
   #   recent_recommendation <- get_recommend_location()
   #   return()
   # })
-  test_data <- reactive({
-    input$submit
-    recent_test <- loadData_Dropbox()
-    return(recent_test)
-  })
+  # test_data <- reactive({
+  #   input$submit
+  #   recent_test <- loadData_Dropbox_cleaned()
+  #   return(recent_test)
+  # })
+  test_data <- reactiveValues(
+    data = loadData_Dropbox_cleaned()
+  )
+  observeEvent(input$submit, {
+    test_data$data = loadData_Dropbox_cleaned()
+  }, priority = -1)
   assignment_data <- reactiveValues(
     data = loadAssigment_Dropbox_cleaned()
   )
@@ -288,7 +296,7 @@ server <- function(input, output, session) {
     location_info <- location_data()
     
     # test)
-    test_summarised <- test_data() %>%
+    test_summarised <- test_data$data %>%
       group_by(location_name) %>%
       summarise_at(vars(positive, total), .funs = list(sum)) %>%
       mutate(
@@ -441,7 +449,7 @@ server <- function(input, output, session) {
       sendSweetAlert(
         session = session,
         title = "SUCCESS !!",
-        text = "Task assigned",
+        text = "Schedule Updated",
         type = "success"
       )  
     } else {
@@ -759,7 +767,7 @@ server <- function(input, output, session) {
       sendSweetAlert(
         session = session,
         title = "SUCCESS !!",
-        text = "Task assigned",
+        text = "Schedule Updated",
         type = "success"
       )
     } else {
@@ -834,8 +842,8 @@ server <- function(input, output, session) {
         "group_id" = input$entry_group_id,
         "location_name" = input$entry_location,
         "date" = ymd(input$entry_date), 
-        "start_time" = ymd_hm(input$entry_start_time),
-        "end_time" = ymd_hm(input$entry_end_time),
+        "start_time" = as_datetime(input$entry_start_time),
+        "end_time" = as_datetime(input$entry_end_time),
         "positive" = input$entry_positive,
         "total" = input$entry_total,
         "note" = input$entry_note
@@ -845,7 +853,7 @@ server <- function(input, output, session) {
   })
   
   observeEvent(input$submit,{
-    saveData_Dropbox(entry_data())
+    saveData_Dropbox_cleaned(entry_data(), test_data$data)
     sendSweetAlert(
       session = session,
       title = "Success !!",
@@ -857,13 +865,15 @@ server <- function(input, output, session) {
   output$test_data_table <- DT::renderDataTable({
     input$submit
     location <- input$entry_location
-    loadData_Dropbox() %>%
-      as_tibble() %>%
-      mutate(
-        date = ymd(date),
-        start_time = as_datetime(start_time),
-        end_time = as_datetime(end_time)
-      ) %>%
+    # loadData_Dropbox_cleaned() %>%
+    #   as_tibble() %>%
+    #   mutate(
+    #     date = ymd(date),
+    #     start_time = as_datetime(start_time),
+    #     end_time = as_datetime(end_time)
+    #   ) %>%
+    #   filter(location_name == location)
+    test_data$data %>%
       filter(location_name == location)
   })
 }
