@@ -211,7 +211,7 @@ ui_tab_location <- function() {
 }
 # ================ UI: Layout =====================================================
 ui <- bootstrapPage(
-  navbarPage("SARS-COV-2 Mobile Testing", id = "nav", selected = "Regional Map",
+  navbarPage("SARS-COV-2 Mobile Testing (secured demo)", id = "nav", selected = "Regional Map",
              useShinydashboard(),
              #useShinydashboardPlus(),
              useShinyjs(),

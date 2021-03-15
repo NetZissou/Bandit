@@ -6,10 +6,10 @@ library(RSQLite)
 sqlitePath <- "data/banditdb.sqlite"
 token <- readRDS("droptoken.rds")
 drop_auth(rdstoken = "droptoken.rds")
-DROPBOX_TEST_DATA_PATH <- "Bandit/test data"
-DROPBOX_TEST_CLEANED_DATA_PATH <- "Bandit/test_cleaned"
-DROPBOX_ASSIGNMENT_DATA_PATH <- "Bandit/assignment"
-DROPBOX_ASSIGNMENT_CLEANED_DATA_PATH <- "Bandit/assignment_cleaned"
+DROPBOX_TEST_DATA_PATH <- "Bandit/demo/test data"
+DROPBOX_TEST_CLEANED_DATA_PATH <- "Bandit/demo/test_cleaned"
+DROPBOX_ASSIGNMENT_DATA_PATH <- "Bandit/demo/assignment"
+DROPBOX_ASSIGNMENT_CLEANED_DATA_PATH <- "Bandit/demo/assignment_cleaned"
 
 logit <- function(p) {
   return(
