@@ -22,21 +22,41 @@ get_location_geometry <- function(address = "Museum Contemporary Australia") {
       "key" = Sys.getenv("GMP_API"),
       "input" = address,
       "inputtype" = "textquery",
-      "fields" = "formatted_address,geometry"
+      "fields" = "formatted_address,geometry,name"
     )
   )
   response <- content(res, as = "text", encoding = "UTF-8")
   df <- fromJSON(response, flatten = TRUE) %>% 
     data.frame() %>%
-    select(1:3) %>%
-    set_names(c("formatted_address", "lat", "lng")) %>%
-    mutate(address = address) %>%
+    select(1:4) %>%
+    set_names(c("formatted_address", "location_name", 
+                "lat", "lng")) %>%
     as_tibble()
+  if (nrow(df) == 0) {
+    cat(address, ": Failed to connect\n")
+    df <- tibble(
+      formatted_address = character(),
+      location_name = character(),
+      lat = numeric(),
+      lng = numeric()
+    )
+  }
   return(df)
 }
 
+
+get_location_geometry_safely <- 
+  possibly(
+    get_location_geometry,
+    otherwise = tibble(
+      formatted_address = character(),
+      location_name = character(),
+      lat = numeric(),
+      lng = numeric()
+    )
+  )
 get_multiple_locations <- function(addresses = LOCATION_CANDIDATES) {
-  return(map_df(addresses, get_location_geometry))
+  return(map_df(addresses, get_location_geometry_safely))
 }
 
 pseudo_data <-

@@ -11,6 +11,7 @@ library(shinyTime)
 #library(sf)
 source("assist/utility.R")
 load("data/pseudo_data.RData")
+load("data/location_geo_info.RData")
 customGreen0 = "#DeF7E9"
 customGreen = "#71CA97"
 # TODO: Make this interactive
@@ -116,9 +117,8 @@ ui_location_box <- function() {
   fluidRow(
     column(width = 3,
            h3(textOutput("box_location_name")),
-           tags$strong("Category: "), br(),
-           tags$strong("Census Name & Number: "), br(),
-           tags$strong(textOutput("box_location_address"))
+           tags$strong("Category: "), textOutput("box_location_type"),
+           tags$strong("Address: "), textOutput("box_location_address")
     ),
     column(width = 6,
            leafletOutput("box_location_map", height = 220)
@@ -300,7 +300,7 @@ server <- function(input, output, session) {
       group_by(location_name) %>%
       summarise_at(vars(positive, total), .funs = list(sum)) %>%
       mutate(
-        positivity = positive/total
+        positivity = ifelse(total>0, positive/total, 0)
       )
     location_info <- 
       location_info %>% 
@@ -802,6 +802,9 @@ server <- function(input, output, session) {
       filter(location_name == target_region)
     output$box_location_name <- renderText({
       location_info$location_name
+    })
+    output$box_location_type <- renderText({
+      location_info$type
     })
     output$box_location_address <- renderText({
       location_info$address
