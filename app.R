@@ -90,7 +90,7 @@ ui_tab_regional_map <- function() {
                         fluidRow(
                           column(width = 6,
                                  dateInput("map_date", 
-                                           value = "2021-03-17",
+                                           value = as.character(Sys.Date()),
                                            label = "")
                           ),
                           column(width = 6, 
@@ -153,7 +153,7 @@ ui_data_entry <- function() {
           width = "400px"
         ),
         
-        dateInput("entry_date", "Entry date: "),
+        dateInput("entry_date", "Entry date: ", value = as.character(Sys.Date())),
         fluidRow(
           column(width = 6,
                  timeInput("entry_start_time", "Start time: ", 
