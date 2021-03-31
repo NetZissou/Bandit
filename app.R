@@ -328,6 +328,16 @@ server <- function(input, output, session) {
           !assigned&recommended ~ "red",
           TRUE ~ "regular"
         )
+      ) %>%
+      replace_na(list(
+        positive = 0,
+        total = 0,
+        positivity = 0,
+        group_id = 0
+      )) %>%
+      select(
+        -date, 
+        -assign_datetime
       )
     #print(location_info)
     # --------------------------------- #
