@@ -306,6 +306,14 @@ get_recommend_location <- function() {
   return(recommendation_data)
 }
 
+get_beta_obs <- function(n = 1, positive, negative) {
+  if (positive == 0 & negative == 0) {
+    result <- 0
+  } else {
+    result <- rbeta(n, shape1 = positive, shape2 = negative)
+  }
+  return(result)
+}
 
 
 

@@ -289,6 +289,47 @@ server <- function(input, output, session) {
   }, priority = -2)
   
   
+  bandit_algorithm_data <- reactive({
+    
+    location_info <- location_data()
+    
+    test_summarised <- test_data$data %>%
+      group_by(location_name) %>%
+      summarise_at(vars(positive, total), .funs = list(sum)) %>%
+      mutate(
+        positivity = ifelse(total>0, positive/total, 0)
+      )
+    
+    location_info <- 
+      location_info %>% 
+      left_join(
+        test_summarised, by = "location_name"
+      ) %>%
+      replace_na(list(
+        positive = 0,
+        total = 0,
+        positivity = 0
+      ))
+    
+    bandit_data <- location_info %>%
+      mutate(
+        negative = total - positive
+      ) %>%
+      select(location_name, positive, negative) 
+    
+    return(bandit_data)
+  })
+  
+  bandit_algorithm_recommendation <- reactive({
+    input$refresh
+    bandit_data <- bandit_algorithm_data() %>%
+      mutate(
+        prob = map2_dbl(positive, negative, get_beta_obs, n = 1)
+      ) %>%
+      arrange(-prob)
+    return(bandit_data)
+  })
+  
   map_info <- reactive({
     # --------------------------------- #
     # Gather Information from tables
@@ -308,7 +349,11 @@ server <- function(input, output, session) {
         test_summarised, by = "location_name"
       )
     # recommendation)
-    recommended_locations <- recommendation_data$location_name
+    N_RECOMMENDATION <- 5
+    algo_recommendations <- bandit_algorithm_recommendation() %>%
+      head(N_RECOMMENDATION) %>%
+      filter(prob > 0)
+    recommended_locations <- algo_recommendations %>% pull(location_name)
     location_info <- location_info %>%
       mutate(recommended = location_name %in% recommended_locations)
     
@@ -370,6 +415,11 @@ server <- function(input, output, session) {
     return(map_info_list)
   })
   
+  
+  # observeEvent(input$refresh, {
+  #   print(bandit_algorithm_recommendation())
+  # })
+  
   map_info_recommened <- reactive({
     map_info_list <- map_info()
     map_info_recommened_list <- list(
@@ -390,25 +440,56 @@ server <- function(input, output, session) {
   # ===================================================== #
   
   
-  assignment_table_data <- recommendation_data %>%
-    arrange(-confidence) %>%
-    head(5) %>%
-    rename(Location = location_name)
-  for (i in 1:nrow(assignment_table_data)) {
-    assignment_table_data$assignment[i] <- 
-      as.character(
-        selectInput(paste0("sel", i), "",
+  # assignment_table_data <- recommendation_data %>%
+  #   arrange(-confidence) %>%
+  #   head(5) %>%
+  #   rename(Location = location_name)
+  # 
+  # for (i in 1:nrow(assignment_table_data)) {
+  #   assignment_table_data$assignment[i] <- 
+  #     as.character(
+  #       selectInput(paste0("sel", i), "",
+  #                   selected = "Select",
+  #                   choices = set_names(c("Select",  0, group_info$group_id),
+  #                                       c("Select",  "Unassign", group_info$group_id)),
+  #                   multiple = F,
+  #                   width = "80px"))
+  # }
+  
+  
+  assignment_table_data <- reactive({
+    algo_recommendation <- bandit_algorithm_recommendation() %>%
+      select(Location = location_name, confidence = prob) %>%
+      head(5)
+    
+    
+    generate_selectInput <- function(index) {
+      
+      result <- as.character(
+        selectInput(paste0("sel", index), "",
                     selected = "Select",
                     choices = set_names(c("Select",  0, group_info$group_id),
                                         c("Select",  "Unassign", group_info$group_id)),
                     multiple = F,
                     width = "80px"))
-  }
+      return(result)
+    }
+    
+    table_data <- algo_recommendation %>%
+      mutate(
+        index = row_number(),
+        assignment = map_chr(index, generate_selectInput)
+      ) %>%
+      select(-index)
+    
+    return(table_data)
+  })
   
   
   
-  output$assignment_table = DT::renderDT(
-    assignment_table_data, escape = FALSE, selection = 'none', server = FALSE,
+  output$assignment_table <- DT::renderDT({
+      assignment_table_data()
+    }, escape = FALSE, selection = 'none', server = FALSE,
     options = list(dom = 't', paging = FALSE, ordering = FALSE),
     callback = JS("table.rows().every(function(i, tab, row) {
         var $this = $(this.node());
@@ -426,8 +507,9 @@ server <- function(input, output, session) {
   assign_entry <- reactive({
     input$assign
     
+    table_data <- assignment_table_data()
     assign_list <- 
-      sapply(1:nrow(assignment_table_data), function(i) input[[paste0("sel", i)]])
+      sapply(1:nrow(table_data), function(i) input[[paste0("sel", i)]])
     
     assigned_index <- which(assign_list != "Select")
     assign_date <- input$map_date
@@ -440,7 +522,7 @@ server <- function(input, output, session) {
     if (length(assigned_index) > 0) {
       data <- tibble(
         group_id = unlist(assign_list)[assigned_index],
-        location_name = assignment_table_data[assigned_index,]$Location,
+        location_name = table_data[assigned_index,]$Location,
         date = ymd(assign_date),
         assign_datetime = Sys.time()
       )
@@ -548,40 +630,48 @@ server <- function(input, output, session) {
       map_info_recommened_list <- map_info_recommened()
       location_info <- map_info_recommened_list$location_info
       pal <- map_info_recommened_list$pal
-      proxy <- leafletProxy("regional_map", data = location_info) %>%
-        clearControls() %>%
-        clearMarkers() %>%
-        clearShapes() %>%
-        # Markers: All
-        addAwesomeMarkers(
-          ~lng, ~lat,
-          layerId = ~location_name,
-          icon= ~pin_icons[icon_type],
-          popup = ~popup_content,
-          label = ~label_content,
-          labelOptions = labelOptions(
-            noHide = F, textsize = "15px", opacity = 0.85
+      if (nrow(location_info) == 0) {
+        proxy <- leafletProxy("regional_map", data = location_info) %>%
+          clearControls() %>%
+          clearMarkers() %>%
+          clearShapes() %>%
+          setView(lat = 39.9612, lng = -82.9988, zoom = 11)
+      } else {
+        proxy <- leafletProxy("regional_map", data = location_info) %>%
+          clearControls() %>%
+          clearMarkers() %>%
+          clearShapes() %>%
+          # Markers: All
+          addAwesomeMarkers(
+            ~lng, ~lat,
+            layerId = ~location_name,
+            icon= ~pin_icons[icon_type],
+            popup = ~popup_content,
+            label = ~label_content,
+            labelOptions = labelOptions(
+              noHide = F, textsize = "15px", opacity = 0.85
+            )
+          ) %>%
+          # Circles: All
+          addCircles(
+            ~lng, ~lat,
+            weight = 2, color = "black",
+            fillColor = ~pal(positivity), stroke = TRUE,
+            layerId = ~location_name,
+            labelOptions = labelOptions(noHide = F, direction = 'auto'),
+            options = markerOptions(riseOnHover = TRUE),
+            #opacity = ~ positivity, #~expit(positivity),
+            #fillOpacity = ~positivity,
+            radius = ~normalize(total, min = RADIUS_MIN, max = RADIUS_MAX)) %>%
+          addLegend(
+            pal = pal, values = ~positivity, 
+            opacity = 0.7, title = "Positivity", position = "bottomright",
+            labFormat = labelFormat(
+              prefix = "(", suffix = ")%", between = ", ",
+              transform = function(x) 100 * x
+            )
           )
-        ) %>%
-        # Circles: All
-        addCircles(
-          ~lng, ~lat,
-          weight = 2, color = "black",
-          fillColor = ~pal(positivity), stroke = TRUE,
-          layerId = ~location_name,
-          labelOptions = labelOptions(noHide = F, direction = 'auto'),
-          options = markerOptions(riseOnHover = TRUE),
-          #opacity = ~ positivity, #~expit(positivity),
-          #fillOpacity = ~positivity,
-          radius = ~normalize(total, min = RADIUS_MIN, max = RADIUS_MAX)) %>%
-        addLegend(
-          pal = pal, values = ~positivity, 
-          opacity = 0.7, title = "Positivity", position = "bottomright",
-          labFormat = labelFormat(
-            prefix = "(", suffix = ")%", between = ", ",
-            transform = function(x) 100 * x
-          )
-        )
+      }
     } else {
       map_info_list <- map_info()
       location_info <- map_info_list$location_info
@@ -697,12 +787,14 @@ server <- function(input, output, session) {
     proxy %>% setView(lng = goto_lng, lat = goto_lat, zoom = 15)
   })
   observe({
-    recommendation_df <- recommendation_data
+    #recommendation_df <- recommendation_data
+    recommendation_df <- bandit_algorithm_recommendation() %>%
+      select(location_name, confidence = prob) %>%
+      head(5)
     location_df <- location_data()
     
     algo_recommendation_location <-
       recommendation_df %>%
-      arrange(-confidence) %>%
       mutate(
         pct_confidence = percent(confidence),
         location_confidence = glue::glue("{location_name}: {pct_confidence}")
