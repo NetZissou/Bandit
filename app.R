@@ -11,6 +11,7 @@ library(shinyTime)
 #library(sf)
 source("assist/utility.R")
 #load("data/pseudo_data.RData")
+load("data/group_info.RData")
 load("data/location_geo_info_demo.RData")
 customGreen0 = "#DeF7E9"
 customGreen = "#71CA97"
@@ -326,7 +327,10 @@ server <- function(input, output, session) {
       mutate(
         prob = map2_dbl(positive, negative, get_beta_obs, n = 1)
       ) %>%
-      arrange(-prob)
+      arrange(-prob) %>%
+      mutate(
+        prob = round(prob, digits = 4)
+      )
     return(bandit_data)
   })
   
