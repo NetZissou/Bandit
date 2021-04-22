@@ -5,7 +5,7 @@ library(jsonlite)
 library(tidyverse)
 library(lubridate)
 LOCATION_CANDIDATES <- c(
-  "thompson library Columbus",
+  "Thompson library Columbus",
   "18th library Columbus",
   "Ohio Union Columbus",
   "Condado Tacos Columbus",
