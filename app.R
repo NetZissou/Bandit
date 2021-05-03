@@ -326,7 +326,10 @@ server <- function(input, output, session) {
       mutate(
         prob = map2_dbl(positive, negative, get_beta_obs, n = 1)
       ) %>%
-      arrange(-prob)
+      arrange(-prob) %>%
+      mutate(
+        prob = round(prob, digits = 4)
+      )
     return(bandit_data)
   })
   
