@@ -202,7 +202,7 @@ trace_plot <- function(param_logs, bandit = 1) {
     ) %>%
     ggplot(aes(x = step, y = theta)) +
     geom_line(color = "darkred") + 
-    labs(y = "Positivity Rate",
+    labs(y = "Positivity Rate Estimator",
          title = plot_title) +
     theme_minimal()
   
