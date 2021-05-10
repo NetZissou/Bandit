@@ -215,7 +215,6 @@ ui <- bootstrapPage(
              useShinydashboard(),
              #useShinydashboardPlus(),
              useShinyjs(),
-             useSweetAlert(),
              collapsible = TRUE,
              theme = shinytheme("yeti"),
              tags$head(
@@ -973,14 +972,6 @@ server <- function(input, output, session) {
   output$test_data_table <- DT::renderDataTable({
     input$submit
     location <- input$entry_location
-    # loadData_Dropbox_cleaned() %>%
-    #   as_tibble() %>%
-    #   mutate(
-    #     date = ymd(date),
-    #     start_time = as_datetime(start_time),
-    #     end_time = as_datetime(end_time)
-    #   ) %>%
-    #   filter(location_name == location)
     test_data$data %>%
       filter(location_name == location)
   })
