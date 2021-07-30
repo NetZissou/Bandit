@@ -11,7 +11,8 @@ library(shinyTime)
 #library(sf)
 source("assist/utility.R")
 load("data/pseudo_data.RData")
-load("data/location_geo_info.RData")
+#load("data/location_geo_info.RData")
+load("data/location_geo_info_prod.RData")
 customGreen0 = "#DeF7E9"
 customGreen = "#71CA97"
 # TODO: Make this interactive
